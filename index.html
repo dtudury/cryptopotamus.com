@@ -4,6 +4,10 @@
     <head> 
         <meta charset=utf-8 /> 
         <title>cryptopotamus</title> 
+        <script>
+            var safe_location = "https://dtudury.github.io/cryptopotamus.com/";
+            if (window.location !== safe_location) window.location.replace(safe_location);
+        </script>
     </head> 
     <body onload="handle_onload()"> 
         salt: <input type="password" name="more_salt" size = "20" id = "more_salt" onchange="generate_passwords();"/> 
