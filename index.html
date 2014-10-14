@@ -1,0 +1,313 @@
+
+<!DOCTYPE html> 
+<html> 
+    <head> 
+        <meta charset=utf-8 /> 
+        <title>cryptopotamus</title> 
+    </head> 
+    <body onload="handle_onload()"> 
+        salt: <input type="password" name="more_salt" size = "20" id = "more_salt" onchange="generate_passwords();"/> 
+        <input type="button" value="Generate Passwords" onclick = "generate_passwords();"/> 
+        <a href="#" onclick = "save_to_cookie();">Save</a> 
+        <a id="toggle_advanced_button" href="#" onclick="show_advanced_mode();">Advanced</a> 
+        <br> 
+        <br> 
+        <hr> 
+        <div id="inputs_holder"></div> 
+        <input type="button" value="+" onclick = "append_sitepasswordgenerator()"/> 
+        <br> 
+        <hr> 
+        <textarea id="cut_and_paste" style="visibility:hidden" onchange="handle_paste(this);" rows="7" cols="70"></textarea> 
+        <script> 
+            var default_valuesets = "somesite.com, user.name,16,%5B%5E_01iloILO%5CW%5D,,";
+            if( getCookie( "default_valuesets")) default_valuesets = getCookie( "default_valuesets");
+            
+            function getCookie(c_name) {
+                var i,x,y,ARRcookies=document.cookie.split(";");
+                for (i=0;i<ARRcookies.length;i++) {
+                    x=ARRcookies[i].substr(0,ARRcookies[i].indexOf("="));
+                    y=ARRcookies[i].substr(ARRcookies[i].indexOf("=")+1);
+                    x=x.replace(/^\s+|\s+$/g,"");
+                    if (x==c_name) return unescape(y);
+                }
+            }
+            
+            function setCookie(c_name,value,exdays) {
+                var exdate=new Date();
+                exdate.setDate(exdate.getDate() + exdays);
+                var c_value=escape(value) + ((exdays===null) ? "" : "; expires="+exdate.toUTCString());
+                document.cookie=c_name + "=" + c_value;
+            }
+            
+            
+            var password_char_set = "";
+            for( var i = 33; i <= 126; i++) password_char_set += String.fromCharCode( i);
+            var inputs_sets = [];
+            function wrap( in_a, in_b)
+            {
+                return in_a >>> in_b | in_a << ( 32 - in_b);
+            }
+            function GeneratorNodeInputs( in_holder_node, in_website_node, in_name_node, in_password_node, in_advanced_node, in_length_node, in_regex_node, in_filter_node, in_version_node)
+            {
+                this.holder_node = in_holder_node;
+                this.website_node = in_website_node;
+                this.name_node = in_name_node;
+                this.password_node = in_password_node;
+                this.advanced_node = in_advanced_node;
+                this.length_node = in_length_node;
+                this.regex_node = in_regex_node;
+                this.filter_node = in_filter_node;
+                this.version_node = in_version_node;
+                this.get_website = function() { return this.website_node.value;};
+                this.get_name = function() { return this.name_node.value;};
+                this.get_length = function() { return this.length_node.value;};
+                this.get_regex = function() { return this.regex_node.value;};
+                this.get_filter = function() { return this.filter_node.value;};
+                this.get_version = function() { return this.version_node.value;};
+                this.toString = function() {
+                    var valueset = [ escape( this.get_website()), escape( this.get_name()), escape( this.get_length()), escape( this.get_filter()), escape( this.get_regex()), escape( this.get_version())];
+                    return valueset.join( ",");
+                };
+            }
+            function Twister( in_salt)
+            {
+                var HUNDRED_MILLIONTH_PRIME  = 2038074743;
+                var NINETY_MILLIONTH_PRIME   = 1824261409;
+                var EIGHTY_MILLIONTH_PRIME   = 1611623773;
+                var SEVENTY_MILLIONTH_PRIME  = 1400305337;
+                var SIXTY_MILLIONTH_PRIME    = 1190494759;
+                var FORTY_MILLIONTH_PRIME    =  776531401;
+                var _table = [];
+                var _table_index = 0;
+                var _salt_mine = in_salt;
+                var _salt_index = 0;
+                function reset() {
+                    var i;
+                    for( i = 0; i < 32; i++) _table[ i] = 0;
+                    for( i = 0; i < 2011; i++) _randomize();
+                }
+                function get_password( in_length, in_characters) {
+                    var output = "";
+                    for( var i = 0; i < in_length; i++)
+                    output += in_characters.charAt( random_less_than( in_characters.length));
+                    return output;
+                }
+                function random() {
+                    var i = _table_index & 31;
+                    _table_index++;
+                    var w = _table[ i];
+                    var s = w ^ SIXTY_MILLIONTH_PRIME;
+                    var a = s & 31;
+                    var b = ( s >>> 5) & 31;
+                    var c = ( s >>> 10) & 31;
+                    var d = ( s >>> 15) & 31;
+                    var e = ( s >>> 20) & 31;
+                    var f = ( s >>> 25) & 31;
+                    var x = _table[ a];
+                    var y = _table[ b];
+                    if( a == i) a = (a + 1) & 31;
+                    while( b == i || b == a) b = (b + 1) & 31;
+                    _table[ a] ^= wrap( w, c) ^ NINETY_MILLIONTH_PRIME;
+                    _table[ b] ^= wrap( s, d) ^ EIGHTY_MILLIONTH_PRIME;
+                    _table[ i] = wrap( x, e) ^ wrap( y, f) ^ SEVENTY_MILLIONTH_PRIME ^ _salt();
+                    return _table[ i];
+                }
+                function random_less_than( in_n) {
+                    var r = in_n;
+                    var min_bits = Math.ceil( Math.log( in_n) / Math.log( 2));
+                    min_bits = Math.max( 2, min_bits);
+                    var bit_mask = Math.pow( 2, min_bits) - 1;
+                    while( r >= in_n) {
+                        r = random() & bit_mask;
+                        //r <<= 32 - min_bits;
+                        //r >>>= 32 - min_bits;
+                    }
+                    return r;
+                }
+                function _randomize() {
+                    for( var i = 0; i < 32; i++) random();
+                }
+                function _salt() {
+                    var a = _salt_mine.charCodeAt(_salt_index);
+                    _salt_index = (_salt_index + 1) % _salt_mine.length;
+                    var b = _salt_mine.charCodeAt(_salt_index) << 8;
+                    _salt_index = (_salt_index + 1) % _salt_mine.length;
+                    var c = _salt_mine.charCodeAt(_salt_index) << 16;
+                    _salt_index = (_salt_index + 1) % _salt_mine.length;
+                    var d = _salt_mine.charCodeAt(_salt_index) << 24;
+                    _salt_index = (_salt_index + 1) % _salt_mine.length;
+                    return a ^ b ^ c ^ d;
+                }
+                this.random = random;
+                this.random_less_than = random_less_than;
+                this.get_password = get_password;
+                reset();
+            }
+            function generate_passwords() {
+                var generators = document.getElementsByName( "sitepasswordgenerator");
+                for( var i = 0; i < inputs_sets.length; i++) {
+                    var inputs_set = inputs_sets[ i];
+                    var website = inputs_set.website_node.value;
+                    var user_name = inputs_set.name_node.value;
+                    var pass_length = inputs_set.length_node.value;
+                    var char_set_filter = inputs_set.filter_node.value;
+                    var regex = inputs_set.regex_node.value;
+                    var version = inputs_set.version_node.value;
+                    var char_set_filter_regex = new RegExp( char_set_filter, "g");
+                    var more_salt = document.getElementById("more_salt").value;
+                    var password_char_subset = password_char_set.match( char_set_filter_regex).join( "");
+                    if( password_char_subset.length < 2) password_char_subset = password_char_set;
+                    var test = new Twister( website + " " + user_name + " " + more_salt + version);
+                    var pattern = new RegExp( regex);
+                    var password;
+                    var is_valid;
+                    do {
+                        password = test.get_password( pass_length, password_char_subset);
+                        is_valid = pattern.test( password);
+                    } while( !is_valid);
+                    inputs_set.password_node.innerHTML = " password: " + password;
+                }
+            }
+            function create_generator()
+            {
+                var new_div = document.createElement( "div");
+                var name_attribute = document.createAttribute( "name");
+                name_attribute.nodeValue = "sitepasswordgenerator";
+                new_div.setAttributeNode( name_attribute);
+                return new_div;
+            }
+            function create_advanced_options_holder()
+            {
+                var new_div = document.createElement( "span");
+                var name_attribute = document.createAttribute( "name");
+                name_attribute.nodeValue = "advancedoptionsholder";
+                new_div.setAttributeNode( name_attribute);
+                return new_div;
+            }
+            function create_remove_generator_button( in_inputs_set) {
+                var new_input = document.createElement( "input");
+                new_input.type = "button";
+                new_input.value = "x";
+                new_input.onclick = function() { 
+                    document.getElementById( "inputs_holder").removeChild( in_inputs_set.holder_node); 
+                    for( var i = 0; i < inputs_sets.length; i++) {
+                        if( inputs_sets[ i] == in_inputs_set) inputs_sets.splice( i, 1);
+                    }
+                    update_cut_and_paste();
+                };
+                return new_input;
+            }
+            function create_input( in_name, in_default, in_size) {
+                var new_input = document.createElement( "input");
+                new_input.type = "text";
+                var name_attribute = document.createAttribute( "name");
+                name_attribute.nodeValue = in_name;
+                new_input.setAttributeNode( name_attribute);
+                new_input.value = in_default;
+                new_input.size = in_size;
+                new_input.onchange = update_cut_and_paste;
+                return new_input;
+            }
+            function create_password_node( in_name) {
+                var new_span = document.createElement( "span");
+                var style_attribute = document.createAttribute( "style");
+                style_attribute.nodeValue = "color:gray";
+                new_span.setAttributeNode( style_attribute);
+                var name_attribute = document.createAttribute( "name");
+                name_attribute.nodeValue = in_name;
+                new_span.setAttributeNode( name_attribute);
+                return new_span;
+            }
+            function append_sitepasswordgenerator( in_website, in_user_name, in_pass_length, in_char_set_filter, in_regex, in_version) {
+                in_website = typeof(in_website) != 'undefined' ? in_website : "";
+                in_user_name= typeof(in_user_name) != 'undefined' ? in_user_name: "";
+                in_pass_length= typeof(in_pass_length) != 'undefined' ? in_pass_length : 16;
+                in_char_set_filter= typeof(in_char_set_filter) != 'undefined' ? in_char_set_filter: "[^_01iloILO\\W]";
+                in_regex = typeof(in_regex) != 'undefined' ? in_regex: "";
+                in_version = typeof(in_version) != 'undefined' ? in_version: "";
+                var inputs_holder = document.getElementById( "inputs_holder");
+                var inputs_set = new GeneratorNodeInputs();
+                inputs_set.holder_node = create_generator();
+                inputs_set.holder_node.appendChild( create_remove_generator_button( inputs_set));
+                inputs_set.holder_node.appendChild( document.createTextNode( " website: "));
+                inputs_set.website_node = create_input( "website", in_website, 20);
+                inputs_set.holder_node.appendChild( inputs_set.website_node);
+                inputs_set.holder_node.appendChild( document.createTextNode( " user name: "));
+                inputs_set.name_node = create_input( "user_name", in_user_name, 20);
+                inputs_set.holder_node.appendChild( inputs_set.name_node);
+                inputs_set.password_node = create_password_node( "password");
+                inputs_set.holder_node.appendChild( inputs_set.password_node);
+                inputs_set.holder_node.appendChild( document.createElement( "br"));
+                inputs_set.advanced_node = create_advanced_options_holder();
+                inputs_set.advanced_node.appendChild( document.createTextNode( " length: "));
+                inputs_set.length_node = create_input( "pass_length", in_pass_length, 4);
+                inputs_set.advanced_node.appendChild( inputs_set.length_node);
+                inputs_set.advanced_node.appendChild( document.createTextNode( " char set filter: "));
+                inputs_set.filter_node = create_input( "char_set_filter", in_char_set_filter, 20);
+                inputs_set.advanced_node.appendChild( inputs_set.filter_node);
+                inputs_set.advanced_node.appendChild( document.createTextNode( " regex: "));
+                inputs_set.regex_node = create_input( "regex", in_regex, 20);
+                inputs_set.advanced_node.appendChild( inputs_set.regex_node);
+                inputs_set.advanced_node.appendChild( document.createTextNode( " version: "));
+                inputs_set.version_node = create_input( "version", in_version, 4);
+                inputs_set.advanced_node.appendChild( inputs_set.version_node);
+                inputs_set.advanced_node.appendChild( document.createElement( "hr"));
+                if( document.getElementById( "toggle_advanced_button").innerHTML== "Basic")
+                inputs_set.holder_node.appendChild( inputs_set.advanced_node);
+                inputs_sets.push( inputs_set);
+                update_cut_and_paste();
+                inputs_holder.appendChild( inputs_set.holder_node);
+            }
+            function save_to_cookie() {
+                setCookie( "default_valuesets", inputs_sets.join( ";"), 365);  
+            }
+            function show_advanced_mode() {
+                var toggle_advanced_button= document.getElementById( "toggle_advanced_button");
+                toggle_advanced_button.onclick = show_basic_mode;
+                toggle_advanced_button.innerHTML= "Basic";
+                for( var i = 0; i < inputs_sets.length; i++) {
+                    var inputs_set = inputs_sets[ i];
+                    inputs_set.holder_node.appendChild( inputs_set.advanced_node);
+                }
+                document.getElementById( "cut_and_paste").style.visibility = "visible";
+            }
+            function show_basic_mode() {
+                var toggle_advanced_button= document.getElementById( "toggle_advanced_button");
+                toggle_advanced_button.onclick = show_advanced_mode;
+                toggle_advanced_button.innerHTML= "Advanced";
+                for( var i = 0; i < inputs_sets.length; i++) {
+                    var inputs_set = inputs_sets[ i];
+                    inputs_set.holder_node.removeChild( inputs_set.advanced_node);
+                }
+                document.getElementById( "cut_and_paste").style.visibility = "hidden";
+            }
+            function handle_paste( in_field) {
+                document.getElementById( "inputs_holder").innerHTML = "";
+                inputs_sets = [];
+                default_valuesets = in_field.value;
+                handle_onload();
+            }
+            function update_cut_and_paste() {
+                default_valuesets = inputs_sets.join( ";");
+                var cut_and_paste = document.getElementById( "cut_and_paste");
+                cut_and_paste.innerHTML = default_valuesets.split( ";").join( ";\n");
+            }
+            function handle_onload() {
+                var stripper = /\s+/g;
+                default_valuesets = default_valuesets.replace( stripper , "");
+                //update_cut_and_paste();
+                var _default_valuesets = default_valuesets.split( ";");
+                for( var i = 0; i < _default_valuesets.length; i++) {
+                    var dset = _default_valuesets[ i].split( ",");
+                    append_sitepasswordgenerator(unescape( dset[ 0]), 
+                                                 unescape( dset[ 1]), 
+                                                 unescape( dset[ 2]), 
+                                                 unescape( dset[ 3]), 
+                                                 unescape( dset[ 4]), 
+                                                 unescape( dset[ 5]));
+                }
+            }
+            </script> 
+    </body> 
+</html>
+
