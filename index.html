@@ -6,7 +6,7 @@
         <title>cryptopotamus</title> 
         <script>
             var safe_location = "https://dtudury.github.io/cryptopotamus.com/";
-            if (window.location !== safe_location) window.location.replace(safe_location);
+            if (window.location.origin !== safe_location) window.location.replace(safe_location);
         </script>
     </head> 
     <body onload="handle_onload()"> 
